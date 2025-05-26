@@ -1,34 +1,64 @@
 pipeline {
   agent any
+
   environment {
-    DIRECTORY_PATH         = "./"
-    TESTING_ENVIRONMENT    = "testing-cluster"
-    PRODUCTION_ENVIRONMENT = "Abs-Production"
+    DIRECTORY_PATH         = 'src/'
+    TESTING_ENVIRONMENT    = 'staging'
+    PRODUCTION_ENVIRONMENT = 'prod-server'
   }
+
   stages {
     stage('Build') {
-      steps { echo "Fetch the source code from the directory path specified by the environment variable: ${env.DIRECTORY_PATH}" }
+      steps {
+        echo "Cloning code from ${env.DIRECTORY_PATH}"
+        // sh 'mvn clean compile' or 'npm install'
+      }
     }
+
     stage('Test') {
       steps {
-        echo "Unit tests"
-        echo "Integration tests"
+        echo "Running unit tests"
+        // sh 'mvn test' or 'npm test'
       }
     }
+
     stage('Code Quality Check') {
-      steps { echo "Check the quality of the code" }
+      steps {
+        echo "Running SonarQube analysis"
+        // withSonarQubeEnv('My SonarQube Server') { sh 'sonar-scanner' }
+      }
     }
-    stage('Deploy') {
-      steps { echo "Deploy the application to a testing environment specified by the environment variable: ${env.TESTING_ENVIRONMENT}" }
+
+    stage('Deploy to Staging') {
+      steps {
+        echo "Deploying to ${env.TESTING_ENVIRONMENT}"
+        // sh 'kubectl apply -f k8s/staging/'
+      }
     }
+
     stage('Approval') {
       steps {
-        echo "Waiting for manual approval..."
-        sleep time: 10, unit: 'SECONDS'
+        input message: 'Approve deployment to production?', ok: 'Yes, proceed'
       }
     }
+
     stage('Deploy to Production') {
-      steps { echo "Deploy the code to the production environment: ${env.PRODUCTION_ENVIRONMENT}" }
+      steps {
+        echo "Deploying to production: ${env.PRODUCTION_ENVIRONMENT}"
+        // sh 'kubectl apply -f k8s/prod/'
+      }
+    }
+  }
+
+  post {
+    always {
+      echo 'Cleaning up...'
+    }
+    success {
+      echo 'Pipeline completed successfully!'
+    }
+    failure {
+      echo 'Pipeline failed. Check logs.'
     }
   }
 }
